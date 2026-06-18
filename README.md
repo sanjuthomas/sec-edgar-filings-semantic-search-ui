@@ -123,7 +123,6 @@ sequenceDiagram
     Embed-->>RAG: 384-dim query vector
     RAG->>PG: top-K cosine search (+ optional filters)
     PG-->>RAG: filing_chunks + filings metadata
-    Note over RAG: Chunks stay in server memory
     RAG->>LLM: question + source excerpts
     LLM-->>RAG: answer with [1][2] citations
     RAG-->>Controller: SearchResponse (answer + sources)
