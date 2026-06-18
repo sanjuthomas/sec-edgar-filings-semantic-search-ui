@@ -9,12 +9,8 @@ Companion ingest project: [sec-edgar-filings-to-pgvector](https://github.com/san
 - **Semantic search UI** — Thymeleaf form with question, optional ticker, and optional form-type filters
 - **pgvector retrieval** — cosine nearest-neighbor search over the existing `filing_chunks` / `filings` schema (no Spring AI `PgVectorStore` schema; queries the ingest project's tables directly)
 - **RAG answers with citations** — Ollama synthesizes an answer from retrieved chunks with inline `[1]`, `[2]`, … citations and source cards linking to SEC EDGAR
-- **Auto ticker detection** — when the optional ticker field is blank, the app infers a company filter from the question:
-  - **Company names** — e.g. "Adobe" → `ADBE`, "Goldman Sachs" → `GS`
-  - **Uppercase ticker symbols** — e.g. `ADBE`, `GS` in the question text
-  - Common lowercase words (`it`, `so`, `a`) are **not** treated as tickers
 - **Search-in-progress UX** — submit button disables and shows "Searching…" until the page reloads
-- **Result metadata** — shows retrieval/generation timing, source count, and applied ticker (with "auto-detected" label when inferred)
+- **Result metadata** — shows retrieval/generation timing and source count
 
 ## Stack
 
@@ -46,16 +42,13 @@ mvn spring-boot:run
 
 Open http://localhost:8095
 
-### Example questions
+Example questions:
 
-| Question | Ticker field | Expected behavior |
-|----------|--------------|-------------------|
-| Do you know if the ADBE board approved a buyback program? | blank | Auto-detects `ADBE` from uppercase symbol |
-| Do you know if the Adobe board approved a buyback program? | blank | Auto-detects `ADBE` from company name |
-| Who are the elected directors in Goldman Sachs? | blank | Auto-detects `GS` from company name |
-| Revenue growth trends | blank | No ticker filter; global top-10 search |
+> Do you know if the Adobe board approved a buyback program?
 
-Optional manual filters: ticker (`GS`), form (`10-K`).
+> Who are the elected directors in Goldman Sachs?
+
+Optional filters: ticker (`GS`), form (`10-K`).
 
 ## Configuration
 
@@ -116,39 +109,34 @@ mvn spring-boot:run
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant UI as Thymeleaf UI
-    participant Resolver as TickerResolver
+    participant Browser
+    participant Controller as SearchController
+    participant RAG as RagSearchService
     participant Embed as bge-small ONNX
     participant PG as pgvector
     participant LLM as Ollama
+    participant View as Thymeleaf
 
-    User->>UI: Submit question
-    UI->>Resolver: Infer ticker (if not provided)
-    Resolver-->>UI: e.g. ADBE (auto-detected)
-    UI->>Embed: Embed question
-    Embed-->>UI: 384-dim query vector
-    UI->>PG: Top-K cosine search (+ optional ticker/form filter)
-    PG-->>UI: filing_chunks + filings metadata
-    UI->>LLM: Question + source excerpts
-    LLM-->>UI: Answer with [1][2] citations
-    UI-->>User: Rendered answer + sources
+    Browser->>Controller: POST /search (question)
+    Controller->>RAG: answer(searchForm)
+    RAG->>Embed: embed question
+    Embed-->>RAG: 384-dim query vector
+    RAG->>PG: top-K cosine search (+ optional filters)
+    PG-->>RAG: filing_chunks + filings metadata
+    Note over RAG: Chunks stay in server memory
+    RAG->>LLM: question + source excerpts
+    LLM-->>RAG: answer with [1][2] citations
+    RAG-->>Controller: SearchResponse (answer + sources)
+    Controller->>View: render index.html
+    View-->>Browser: HTML (answer + source cards)
 ```
 
-1. User submits a question (optional ticker/form filters).
-2. **TickerResolver** applies an explicit ticker if provided; otherwise tries company-name matching, then uppercase ticker symbols in the question.
+1. Browser submits a question via POST to `SearchController` (optional ticker/form filters).
+2. `RagSearchService` orchestrates the full RAG pipeline on the server — chunks are **not** sent to the browser until the LLM finishes.
 3. Spring AI embeds the question with `bge-small-en-v1.5` (ONNX).
 4. JDBC queries `filing_chunks` joined with `filings`, using cosine distance (`<=>`) and optional `ticker` / `form` filters.
-5. Top-K chunks are passed to Ollama with a system prompt requiring inline citations.
-6. Thymeleaf renders the answer, source cards, SEC EDGAR links, and applied-ticker metadata.
-
-### Ticker auto-detection
-
-The resolver is a **metadata precision filter**, not vector intelligence. It scopes SQL retrieval to one company when the question mentions a known ticker or company name from the `filings` table.
-
-- **Why it exists:** generic questions like "share buyback program" can match semantically similar chunks from many companies in a global top-10 search.
-- **What it does not do:** teach the embedding model that `ADBE` and `Adobe` are synonyms — that similarity is handled by the embedding model at query time; the resolver adds an optional SQL `WHERE ticker = ?` when a company can be identified.
-- **Manual override:** filling in the optional ticker field always takes precedence over auto-detection.
+5. Top-K chunks are formatted in memory and passed to Ollama with a system prompt requiring inline citations.
+6. Thymeleaf renders a single HTML response with the answer, source cards, and SEC EDGAR links.
 
 ## Project layout
 
@@ -156,9 +144,9 @@ The resolver is a **metadata precision filter**, not vector intelligence. It sco
 src/main/java/com/edgar/search/
 ├── EdgarSemanticSearchApplication.java
 ├── config/
-│   ├── AiConfig.java              # ChatClient bean
+│   ├── AiConfig.java
 │   ├── AppConfig.java
-│   ├── PgvectorConfig.java        # PGvector JDBC type registration
+│   ├── PgvectorConfig.java
 │   └── SearchProperties.java
 ├── controller/
 │   └── SearchController.java
@@ -167,11 +155,11 @@ src/main/java/com/edgar/search/
 │   ├── SearchForm.java
 │   └── SearchResponse.java
 ├── repository/
-│   ├── FilingChunkRepository.java      # Vector search SQL
-│   └── FilingMetadataRepository.java   # Tickers + company names for resolver
+│   ├── FilingChunkRepository.java
+│   └── FilingMetadataRepository.java
 └── service/
-    ├── RagSearchService.java           # Embed → retrieve → generate
-    └── TickerResolver.java             # Auto ticker / company detection
+    ├── RagSearchService.java
+    └── TickerResolver.java
 
 src/main/resources/
 ├── application.yml
@@ -185,10 +173,8 @@ src/test/java/com/edgar/search/service/
 ## Tests
 
 ```bash
-mvn test -Dtest=TickerResolverTest
+mvn test
 ```
-
-Covers explicit ticker preference, uppercase symbol detection, company-name detection, and rejection of ambiguous common-word matches.
 
 ## Troubleshooting
 
@@ -198,11 +184,9 @@ Covers explicit ticker preference, uppercase symbol detection, company-name dete
 | Connection refused on `5433` | Start pgvector (`docker compose up -d pgvector` in ingest project) |
 | Port `8095` already in use | Stop the other process or change `server.port` in `application.yml` |
 | Ollama timeout / slow answers | Large models (e.g. `qwen3:30b`) can take minutes; try a smaller model or increase client timeout |
-| Poor search quality | Ensure query embeddings use `bge-small-en-v1.5`; re-index if you change embedding models |
-| Wrong company in results | Check the "Ticker filter" line in results; override with the optional ticker field |
-| `Adobe` vs `ADBE` behave differently | Both should auto-detect `ADBE`; if not, check company name exists in `filings` and restart the app |
+| Poor search quality | Ensure query embeddings use `bge-small-en-v1.5`; re-index if you change embedding models; try optional ticker/form filters |
 | ONNX download fails | Ensure network access to huggingface.co on first startup |
-| Java 25 + Mockito test errors | Run a single test class as shown above, or use Java 21 for tests |
+| Java 25 + Mockito test errors | Use Java 21 for tests |
 
 ## Database requirements
 
