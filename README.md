@@ -1,8 +1,10 @@
 # SEC EDGAR Semantic Search UI
 
-RAG web app for SEC EDGAR filings stored in **pgvector**. Ask a natural-language question, retrieve the top 10 matching chunks, and generate a cited answer with a local **Ollama** LLM.
+RAG web app for SEC EDGAR filings stored in **pgvector** or **Qdrant**. Ask a natural-language question, retrieve the top 10 matching chunks, and generate a cited answer with a local **Ollama** LLM.
 
-Companion ingest project: [sec-edgar-filings-to-pgvector](https://github.com/sanjuthomas/sec-edgar-filings-to-pgvector).
+Companion ingest projects: [sec-edgar-filings-to-pgvector](https://github.com/sanjuthomas/sec-edgar-filings-to-pgvector), [sec-edgar-filings-to-qdrant](https://github.com/sanjuthomas/sec-edgar-filings-to-qdrant).
+
+Licensed under the [MIT License](LICENSE).
 
 ## Features
 
@@ -218,3 +220,7 @@ Useful checks:
 psql postgresql://localhost:5433/edgar -c "SELECT COUNT(*) FROM filing_chunks;"
 psql postgresql://localhost:5433/edgar -c "SELECT indexname FROM pg_indexes WHERE tablename = 'filing_chunks';"
 ```
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
