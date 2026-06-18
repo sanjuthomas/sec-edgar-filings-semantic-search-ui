@@ -28,7 +28,7 @@ spring:
       base-url: http://localhost:11434
       chat:
         options:
-          model: qwen3:14b
+          model: qwen3:30b
           temperature: 0.2
           num-predict: 2048
 
@@ -44,7 +44,7 @@ app:
     embedding-dimensions: 384
 
   vectorstores:
-    default-vector-store: pgvector
+    default-vector-store: qdrant
     qdrant:
       url: http://localhost:16333
       collection: filing_chunks
