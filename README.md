@@ -50,6 +50,56 @@ Example questions:
 
 Optional filters: ticker (`GS`), form (`10-K`).
 
+## Docker
+
+Published to Docker Hub as [`sanjuthomas/sec-edgar-filings-semantic-search-ui`](https://hub.docker.com/r/sanjuthomas/sec-edgar-filings-semantic-search-ui).
+
+### Run from Docker Hub
+
+Requires **pgvector** and **Ollama** reachable from the container (example uses services on the Docker host):
+
+```bash
+docker run --rm -p 8095:8095 \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5433/edgar \
+  -e SPRING_DATASOURCE_USERNAME=sanjuthomas \
+  -e SPRING_AI_OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+  --add-host=host.docker.internal:host-gateway \
+  sanjuthomas/sec-edgar-filings-semantic-search-ui:latest
+```
+
+Or with Compose:
+
+```bash
+docker compose up --build
+```
+
+### Build locally
+
+```bash
+docker build -t sanjuthomas/sec-edgar-filings-semantic-search-ui:local .
+```
+
+### Publish to Docker Hub (maintainers)
+
+GitHub Actions publishes on push to `main`, version tags (`v*`), or manual **workflow_dispatch**.
+
+Add these repository secrets in GitHub:
+
+| Secret | Description |
+|--------|-------------|
+| `DOCKERHUB_USERNAME` | Docker Hub username (`sanjuthomas`) |
+| `DOCKERHUB_TOKEN` | Docker Hub access token |
+
+Create a token at https://hub.docker.com/settings/security
+
+Image tags:
+
+| Trigger | Tags |
+|---------|------|
+| Push to `main` | `latest`, `main-<sha>` |
+| Tag `v1.0.0` | `latest`, `v1.0.0` |
+| Manual dispatch | `main-<sha>` |
+
 ## Configuration
 
 Edit `src/main/resources/application.yml`:
