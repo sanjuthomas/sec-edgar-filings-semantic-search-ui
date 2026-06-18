@@ -1,0 +1,48 @@
+server:
+  port: 8095
+
+spring:
+  application:
+    name: sec-edgar-semantic-search
+
+  # Spring Boot 3.4 + Ollama: avoid JDK HttpClient issues with long-running LLM calls
+  http:
+    client:
+      factory: simple
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/edgar
+    username: ${PGUSER:sanjuthomas}
+    password: ${PGPASSWORD:}
+    driver-class-name: org.postgresql.Driver
+
+  thymeleaf:
+    cache: false
+
+  ai:
+    model:
+      chat: ollama
+      embedding: transformers
+
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: qwen3:14b
+          temperature: 0.2
+          num-predict: 2048
+
+    transformers:
+      onnx:
+        model-uri: https://huggingface.co/onnx-community/bge-small-en-v1.5-ONNX/resolve/main/onnx/model.onnx
+      tokenizer:
+        uri: https://huggingface.co/onnx-community/bge-small-en-v1.5-ONNX/resolve/main/tokenizer.json
+
+app:
+  search:
+    top-k: 10
+    embedding-dimensions: 384
+
+logging:
+  level:
+    com.edgar.search: INFO

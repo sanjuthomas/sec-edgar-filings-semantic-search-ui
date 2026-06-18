@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEC EDGAR Semantic Search</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="page">
+    <header class="hero">
+        <p class="eyebrow">SEC EDGAR · pgvector · Ollama</p>
+        <h1>Semantic search over filings</h1>
+        <p class="subtitle">
+            Ask a natural-language question. The app retrieves the top 10 matching chunks from pgvector,
+            then synthesizes an answer with citations using your local Ollama model.
+        </p>
+    </header>
+
+    <section class="panel">
+        <form id="search-form" th:action="@{/search}" th:object="${searchForm}" method="post" class="search-form">
+            <label for="question">Question</label>
+            <textarea
+                    id="question"
+                    th:field="*{question}"
+                    rows="3"
+                    placeholder="Who are the elected directors in Goldman Sachs?"
+                    required></textarea>
+            <p class="field-error" th:if="${#fields.hasErrors('question')}" th:errors="*{question}"></p>
+
+            <div class="filters">
+                <div>
+                    <label for="ticker">Ticker (optional)</label>
+                    <input id="ticker" th:field="*{ticker}" type="text" placeholder="GS" maxlength="10">
+                    <p class="field-error" th:if="${#fields.hasErrors('ticker')}" th:errors="*{ticker}"></p>
+                </div>
+                <div>
+                    <label for="form">Form (optional)</label>
+                    <input id="form" th:field="*{form}" type="text" placeholder="10-K" maxlength="20">
+                    <p class="field-error" th:if="${#fields.hasErrors('form')}" th:errors="*{form}"></p>
+                </div>
+            </div>
+
+            <button id="search-button" type="submit" class="primary-button">Search &amp; answer</button>
+        </form>
+    </section>
+
+    <section class="panel result-panel" th:if="${result != null}">
+        <div class="result-header">
+            <h2>Answer</h2>
+            <p class="meta">
+                Retrieved in <span th:text="${result.retrievalMs}">0</span> ms ·
+                Generated in <span th:text="${result.generationMs}">0</span> ms ·
+                <span th:text="${#lists.size(result.sources)}">0</span> sources
+                <span th:if="${result.appliedTicker != null}">
+                    · Ticker filter:
+                    <strong th:text="${result.appliedTicker}">ADBE</strong>
+                    <span th:if="${result.tickerInferred}">(auto-detected from question)</span>
+                </span>
+            </p>
+        </div>
+
+        <article class="answer-card">
+            <p class="question-echo" th:text="'Q: ' + ${result.question}"></p>
+            <div class="answer-body" th:text="${result.answer}"></div>
+        </article>
+
+        <section class="sources" th:if="${!#lists.isEmpty(result.sources)}">
+            <h3>Sources</h3>
+            <div class="source-list">
+                <article class="source-card" th:each="source : ${result.sources}">
+                    <header>
+                        <span class="citation-badge" th:text="'[' + ${source.citationNumber} + ']'"></span>
+                        <strong th:text="${source.ticker + ' · ' + source.companyName}">GS</strong>
+                        <span th:text="${source.form}">10-K</span>
+                        <span th:if="${source.filingDate != null}" th:text="'· filed ' + ${source.filingDate}"></span>
+                    </header>
+                    <p class="source-meta">
+                        Accession <code th:text="${source.accessionNumber}"></code>
+                        · chunk <span th:text="${source.chunkIndex}"></span>
+                        · distance <span th:text="${#numbers.formatDecimal(source.distance, 1, 4)}"></span>
+                        <span th:if="${source.section != null}" th:text="'· ' + ${source.section}"></span>
+                    </p>
+                    <p class="source-excerpt" th:text="${source.content}"></p>
+                    <a th:if="${source.documentUrl != null}"
+                       th:href="${source.documentUrl}"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        View on SEC EDGAR
+                    </a>
+                </article>
+            </div>
+        </section>
+    </section>
+</main>
+<script>
+    (function () {
+        const form = document.getElementById("search-form");
+        const button = document.getElementById("search-button");
+        if (!form || !button) {
+            return;
+        }
+
+        const defaultLabel = button.textContent;
+
+        form.addEventListener("submit", function () {
+            if (!form.checkValidity()) {
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = "Searching…";
+            button.setAttribute("aria-busy", "true");
+        });
+    })();
+</script>
+</body>
+</html>
