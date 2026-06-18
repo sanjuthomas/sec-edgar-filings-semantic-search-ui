@@ -4,9 +4,10 @@ import com.edgar.search.config.SearchProperties;
 import com.edgar.search.model.ChunkMatch;
 import com.edgar.search.model.SearchForm;
 import com.edgar.search.model.SearchResponse;
-import com.edgar.search.repository.FilingChunkRepository;
+import com.edgar.search.model.VectorStoreType;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.ollama.api.OllamaOptions;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,25 +30,26 @@ public class RagSearchService {
 
     private final EmbeddingModel embeddingModel;
     private final ChatClient chatClient;
-    private final FilingChunkRepository filingChunkRepository;
+    private final ChunkSearchRouter chunkSearchRouter;
     private final TickerResolver tickerResolver;
     private final SearchProperties searchProperties;
 
     public RagSearchService(
             EmbeddingModel embeddingModel,
             ChatClient chatClient,
-            FilingChunkRepository filingChunkRepository,
+            ChunkSearchRouter chunkSearchRouter,
             TickerResolver tickerResolver,
             SearchProperties searchProperties
     ) {
         this.embeddingModel = embeddingModel;
         this.chatClient = chatClient;
-        this.filingChunkRepository = filingChunkRepository;
+        this.chunkSearchRouter = chunkSearchRouter;
         this.tickerResolver = tickerResolver;
         this.searchProperties = searchProperties;
     }
 
     public SearchResponse answer(SearchForm form) {
+        VectorStoreType vectorStore = form.vectorStoreType();
         long retrievalStart = System.currentTimeMillis();
 
         TickerResolver.ResolvedTicker resolvedTicker = tickerResolver.resolve(
@@ -56,7 +58,8 @@ public class RagSearchService {
         );
 
         float[] queryVector = embeddingModel.embed(form.question());
-        List<ChunkMatch> sources = filingChunkRepository.findSimilarChunks(
+        List<ChunkMatch> sources = chunkSearchRouter.findSimilarChunks(
+                vectorStore,
                 queryVector,
                 searchProperties.topK(),
                 resolvedTicker.ticker(),
@@ -68,8 +71,12 @@ public class RagSearchService {
         if (sources.isEmpty()) {
             return new SearchResponse(
                     form.question(),
-                    "No matching filing excerpts were found in pgvector for this question.",
+                    "No matching filing excerpts were found in "
+                            + vectorStore.value()
+                            + " for this question.",
                     List.of(),
+                    form.chatModel(),
+                    vectorStore.value(),
                     resolvedTicker.ticker(),
                     resolvedTicker.inferred(),
                     retrievalMs,
@@ -81,6 +88,7 @@ public class RagSearchService {
         long generationStart = System.currentTimeMillis();
 
         String answer = chatClient.prompt()
+                .options(OllamaOptions.builder().model(form.chatModel()).build())
                 .system(SYSTEM_PROMPT)
                 .user(userPrompt(form.question(), context))
                 .call()
@@ -92,6 +100,8 @@ public class RagSearchService {
                 form.question(),
                 answer,
                 sources,
+                form.chatModel(),
+                vectorStore.value(),
                 resolvedTicker.ticker(),
                 resolvedTicker.inferred(),
                 retrievalMs,

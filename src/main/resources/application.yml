@@ -43,6 +43,12 @@ app:
     top-k: 10
     embedding-dimensions: 384
 
+  vectorstores:
+    default-vector-store: pgvector
+    qdrant:
+      url: http://localhost:16333
+      collection: filing_chunks
+
 logging:
   level:
     com.edgar.search: INFO

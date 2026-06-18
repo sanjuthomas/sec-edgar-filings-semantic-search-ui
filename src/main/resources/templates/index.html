@@ -28,6 +28,22 @@
                     required></textarea>
             <p class="field-error" th:if="${#fields.hasErrors('question')}" th:errors="*{question}"></p>
 
+            <label for="chatModel">Ollama model</label>
+            <select id="chatModel" th:field="*{chatModel}" required>
+                <option th:each="modelName : ${chatModels}"
+                        th:value="${modelName}"
+                        th:text="${modelName}"></option>
+            </select>
+            <p class="field-error" th:if="${#fields.hasErrors('chatModel')}" th:errors="*{chatModel}"></p>
+
+            <label for="vectorStore">Vector store</label>
+            <select id="vectorStore" th:field="*{vectorStore}" required>
+                <option th:each="storeName : ${vectorStores}"
+                        th:value="${storeName}"
+                        th:text="${storeName}"></option>
+            </select>
+            <p class="field-error" th:if="${#fields.hasErrors('vectorStore')}" th:errors="*{vectorStore}"></p>
+
             <div class="filters">
                 <div>
                     <label for="ticker">Ticker (optional)</label>
@@ -51,6 +67,8 @@
             <p class="meta">
                 Retrieved in <span th:text="${result.retrievalMs}">0</span> ms ·
                 Generated in <span th:text="${result.generationMs}">0</span> ms ·
+                Vector store <strong th:text="${result.vectorStore}">pgvector</strong> ·
+                Model <strong th:text="${result.chatModel}">qwen3:14b</strong> ·
                 <span th:text="${#lists.size(result.sources)}">0</span> sources
                 <span th:if="${result.appliedTicker != null}">
                     · Ticker filter:

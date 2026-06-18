@@ -8,6 +8,14 @@ public record SearchForm(
         @Size(max = 2000, message = "Question is too long.")
         String question,
 
+        @NotBlank(message = "Please select an Ollama model.")
+        @Size(max = 100, message = "Model name is too long.")
+        String chatModel,
+
+        @NotBlank(message = "Please select a vector store.")
+        @Size(max = 20, message = "Vector store is too long.")
+        String vectorStore,
+
         @Size(max = 10, message = "Ticker is too long.")
         String ticker,
 
@@ -26,5 +34,9 @@ public record SearchForm(
             return null;
         }
         return form.trim().toUpperCase();
+    }
+
+    public VectorStoreType vectorStoreType() {
+        return VectorStoreType.fromValue(vectorStore);
     }
 }

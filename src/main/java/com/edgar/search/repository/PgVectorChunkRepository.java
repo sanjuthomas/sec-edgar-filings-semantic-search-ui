@@ -1,6 +1,7 @@
 package com.edgar.search.repository;
 
 import com.edgar.search.model.ChunkMatch;
+import com.edgar.search.model.VectorStoreType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgvector.PGvector;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-public class FilingChunkRepository {
+public class PgVectorChunkRepository implements ChunkSearchRepository {
 
     private static final TypeReference<Map<String, Object>> METADATA_TYPE = new TypeReference<>() {
     };
@@ -22,11 +23,17 @@ public class FilingChunkRepository {
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
-    public FilingChunkRepository(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+    public PgVectorChunkRepository(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
     }
 
+    @Override
+    public VectorStoreType vectorStoreType() {
+        return VectorStoreType.PGVECTOR;
+    }
+
+    @Override
     public List<ChunkMatch> findSimilarChunks(
             float[] queryEmbedding,
             int topK,
