@@ -137,38 +137,6 @@ sequenceDiagram
 5. Top-K chunks are formatted in memory and passed to Ollama with a system prompt requiring inline citations.
 6. Thymeleaf renders a single HTML response with the answer, source cards, and SEC EDGAR links.
 
-## Project layout
-
-```
-src/main/java/com/edgar/search/
-├── EdgarSemanticSearchApplication.java
-├── config/
-│   ├── AiConfig.java
-│   ├── AppConfig.java
-│   ├── PgvectorConfig.java
-│   └── SearchProperties.java
-├── controller/
-│   └── SearchController.java
-├── model/
-│   ├── ChunkMatch.java
-│   ├── SearchForm.java
-│   └── SearchResponse.java
-├── repository/
-│   ├── FilingChunkRepository.java
-│   └── FilingMetadataRepository.java
-└── service/
-    ├── RagSearchService.java
-    └── TickerResolver.java
-
-src/main/resources/
-├── application.yml
-├── templates/index.html
-└── static/css/app.css
-
-src/test/java/com/edgar/search/service/
-└── TickerResolverTest.java
-```
-
 ## Tests
 
 ```bash
