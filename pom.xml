@@ -15,7 +15,7 @@
     <artifactId>sec-edgar-filings-semantic-search-ui</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <name>SEC EDGAR Semantic Search UI</name>
-    <description>RAG UI for SEC EDGAR filings stored in pgvector</description>
+    <description>RAG UI for SEC EDGAR filings with pgvector or Qdrant retrieval and Ollama answers</description>
 
     <properties>
         <java.version>21</java.version>

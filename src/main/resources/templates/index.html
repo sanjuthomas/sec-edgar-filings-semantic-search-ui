@@ -83,7 +83,7 @@
                 Retrieved in <span th:text="${result.retrievalMs}">0</span> ms ·
                 Generated in <span th:text="${result.generationMs}">0</span> ms ·
                 Vector store <strong th:text="${result.vectorStore}">pgvector</strong> ·
-                Model <strong th:text="${result.chatModel}">qwen3:14b</strong> ·
+                Model <strong th:text="${result.chatModel}">qwen3:30b</strong> ·
                 <span th:text="${#lists.size(result.sources)}">0</span> sources
                 <span th:if="${result.appliedTicker != null}">
                     · Ticker filter:

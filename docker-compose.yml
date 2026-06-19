@@ -9,5 +9,6 @@ services:
       SPRING_DATASOURCE_USERNAME: ${PGUSER:-sanjuthomas}
       SPRING_DATASOURCE_PASSWORD: ${PGPASSWORD:-}
       SPRING_AI_OLLAMA_BASE_URL: http://host.docker.internal:11434
+      APP_VECTORSTORES_QDRANT_URL: http://host.docker.internal:16333
     extra_hosts:
       - "host.docker.internal:host-gateway"

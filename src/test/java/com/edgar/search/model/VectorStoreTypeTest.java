@@ -14,6 +14,13 @@ class VectorStoreTypeTest {
     }
 
     @Test
+    void rejectsBlankValue() {
+        assertThatThrownBy(() -> VectorStoreType.fromValue("  "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("required");
+    }
+
+    @Test
     void rejectsUnknownValue() {
         assertThatThrownBy(() -> VectorStoreType.fromValue("pinecone"))
                 .isInstanceOf(IllegalArgumentException.class);
