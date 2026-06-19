@@ -1,6 +1,5 @@
 package com.edgar.search.service;
 
-import com.edgar.search.config.SearchProperties;
 import com.edgar.search.model.ChunkMatch;
 import com.edgar.search.model.SearchForm;
 import com.edgar.search.model.SearchResponse;
@@ -32,20 +31,17 @@ public class RagSearchService {
     private final ChatClient chatClient;
     private final ChunkSearchRouter chunkSearchRouter;
     private final TickerResolver tickerResolver;
-    private final SearchProperties searchProperties;
 
     public RagSearchService(
             EmbeddingModel embeddingModel,
             ChatClient chatClient,
             ChunkSearchRouter chunkSearchRouter,
-            TickerResolver tickerResolver,
-            SearchProperties searchProperties
+            TickerResolver tickerResolver
     ) {
         this.embeddingModel = embeddingModel;
         this.chatClient = chatClient;
         this.chunkSearchRouter = chunkSearchRouter;
         this.tickerResolver = tickerResolver;
-        this.searchProperties = searchProperties;
     }
 
     public SearchResponse answer(SearchForm form) {
@@ -61,7 +57,7 @@ public class RagSearchService {
         List<ChunkMatch> sources = chunkSearchRouter.findSimilarChunks(
                 vectorStore,
                 queryVector,
-                searchProperties.topK(),
+                form.chunkCount(),
                 resolvedTicker.ticker(),
                 form.normalizedForm()
         );

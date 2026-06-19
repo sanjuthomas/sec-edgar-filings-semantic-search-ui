@@ -9,10 +9,11 @@
 <body>
 <main class="page">
     <header class="hero">
-        <p class="eyebrow">SEC EDGAR · pgvector · Ollama</p>
+        <p class="eyebrow">SEC EDGAR · pgvector · Qdrant · Ollama</p>
         <h1>Ask questions about SEC filings</h1>
         <p class="subtitle">
-            Ask a natural-language question. The app retrieves the top 10 matching chunks from pgvector,
+            Ask a natural-language question. The app retrieves matching chunks from your
+            selected vector store (pgvector or Qdrant),
             then synthesizes an answer with citations using your local Ollama model.
         </p>
     </header>
@@ -43,6 +44,20 @@
                         th:text="${storeName}"></option>
             </select>
             <p class="field-error" th:if="${#fields.hasErrors('vectorStore')}" th:errors="*{vectorStore}"></p>
+
+            <label for="chunkCount">Chunk count</label>
+            <input
+                    id="chunkCount"
+                    th:field="*{chunkCount}"
+                    type="number"
+                    min="1"
+                    max="500"
+                    list="chunkCountOptions"
+                    required>
+            <datalist id="chunkCountOptions">
+                <option th:each="count : ${chunkCountChoices}" th:value="${count}"></option>
+            </datalist>
+            <p class="field-error" th:if="${#fields.hasErrors('chunkCount')}" th:errors="*{chunkCount}"></p>
 
             <div class="filters">
                 <div>

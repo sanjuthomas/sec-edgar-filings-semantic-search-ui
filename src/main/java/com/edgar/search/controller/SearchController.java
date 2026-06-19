@@ -1,5 +1,6 @@
 package com.edgar.search.controller;
 
+import com.edgar.search.config.SearchProperties;
 import com.edgar.search.config.VectorStoresProperties;
 import com.edgar.search.model.SearchForm;
 import com.edgar.search.model.SearchResponse;
@@ -15,22 +16,28 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Controller
 public class SearchController {
 
+    private static final List<Integer> CHUNK_COUNT_CHOICES = List.of(10, 25, 50, 100);
+
     private final RagSearchService ragSearchService;
     private final OllamaModelService ollamaModelService;
     private final VectorStoresProperties vectorStoresProperties;
+    private final SearchProperties searchProperties;
 
     public SearchController(
             RagSearchService ragSearchService,
             OllamaModelService ollamaModelService,
-            VectorStoresProperties vectorStoresProperties
+            VectorStoresProperties vectorStoresProperties,
+            SearchProperties searchProperties
     ) {
         this.ragSearchService = ragSearchService;
         this.ollamaModelService = ollamaModelService;
         this.vectorStoresProperties = vectorStoresProperties;
+        this.searchProperties = searchProperties;
     }
 
     @GetMapping("/")
@@ -73,6 +80,7 @@ public class SearchController {
                 "",
                 ollamaModelService.defaultChatModel(),
                 vectorStoresProperties.defaultVectorStore(),
+                searchProperties.topK(),
                 "",
                 ""
         );
@@ -84,6 +92,7 @@ public class SearchController {
                 "vectorStores",
                 Arrays.stream(VectorStoreType.values()).map(VectorStoreType::value).toList()
         );
+        model.addAttribute("chunkCountChoices", CHUNK_COUNT_CHOICES);
         model.addAttribute("searchForm", searchForm);
     }
 }

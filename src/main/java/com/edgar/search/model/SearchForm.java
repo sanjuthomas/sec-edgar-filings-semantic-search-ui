@@ -1,6 +1,9 @@
 package com.edgar.search.model;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record SearchForm(
@@ -15,6 +18,11 @@ public record SearchForm(
         @NotBlank(message = "Please select a vector store.")
         @Size(max = 20, message = "Vector store is too long.")
         String vectorStore,
+
+        @NotNull(message = "Please enter a chunk count.")
+        @Min(value = 1, message = "Chunk count must be at least 1.")
+        @Max(value = 500, message = "Chunk count cannot exceed 500.")
+        Integer chunkCount,
 
         @Size(max = 10, message = "Ticker is too long.")
         String ticker,
