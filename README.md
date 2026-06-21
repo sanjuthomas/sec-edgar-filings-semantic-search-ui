@@ -21,10 +21,10 @@ Licensed under the [MIT License](LICENSE). AI agent guidance: [AGENTS.md](AGENTS
 |-------|------------|
 | UI | Spring Boot 3.4 + Thymeleaf |
 | Retrieval | PostgreSQL + pgvector **or** Qdrant REST |
-| Query embeddings | Spring AI Transformers ONNX (`BAAI/bge-small-en-v1.5`, 384-dim) |
+| Query embeddings | Ollama `bge-m3` via Spring AI (1024-dim) |
 | Answer generation | Spring AI + Ollama (user-selectable model; default `qwen3:30b`) |
 
-> **Embedding model note:** Indexes were built with `BAAI/bge-small-en-v1.5` (384 dimensions). Query embeddings must use the same model. `mxbai-embed-large` (1024-dim) is **not** compatible. Ollama is used for **chat only**, not query embeddings.
+> **Embedding model note:** Indexes were built with `BAAI/bge-m3` (1024 dimensions). Query embeddings must use the same model (`ollama pull bge-m3`). The previous `bge-small-en-v1.5` (384-dim) index is **not** compatible.
 
 ## Prerequisites
 
@@ -32,13 +32,14 @@ Licensed under the [MIT License](LICENSE). AI agent guidance: [AGENTS.md](AGENTS
 - Maven 3.9+
 - PostgreSQL with pgvector on `localhost:5433`, database `edgar` (when using pgvector)
 - Qdrant on `localhost:16333` (when using Qdrant)
-- Ollama on `localhost:11434` with your chosen chat models
+- Ollama on `localhost:11434` with chat models and **`bge-m3`** for query embeddings
 
 ## Quick start
 
 ```bash
+ollama pull bge-m3
 ollama list
-mvn spring-boot:run   # first run downloads the ONNX embedding model from Hugging Face
+mvn spring-boot:run
 ```
 
 Open http://localhost:8095
@@ -111,7 +112,7 @@ spring:
   ai:
     model:
       chat: ollama
-      embedding: transformers
+      embedding: ollama
     ollama:
       base-url: http://localhost:11434
       chat:
@@ -119,16 +120,13 @@ spring:
           model: qwen3:30b
           temperature: 0.2
           num-predict: 2048
-    transformers:
-      onnx:
-        model-uri: https://huggingface.co/onnx-community/bge-small-en-v1.5-ONNX/resolve/main/onnx/model.onnx
-      tokenizer:
-        uri: https://huggingface.co/onnx-community/bge-small-en-v1.5-ONNX/resolve/main/tokenizer.json
+      embedding:
+        model: bge-m3
 
 app:
   search:
     top-k: 10                    # default chunk count on page load
-    embedding-dimensions: 384
+    embedding-dimensions: 1024
   vectorstores:
     default-vector-store: qdrant
     qdrant:
@@ -140,8 +138,8 @@ app:
 |----------|-------------|
 | `server.port` | HTTP port (default `8095`) |
 | `spring.datasource.*` | PostgreSQL JDBC (pgvector retrieval only) |
-| `spring.ai.ollama.chat.options.model` | Default Ollama model when the page loads |
-| `spring.ai.transformers.onnx.*` | ONNX model for query embeddings |
+| `spring.ai.ollama.chat.options.model` | Default Ollama chat model when the page loads |
+| `spring.ai.ollama.embedding.model` | Ollama embedding model for query vectors (`bge-m3`) |
 | `app.search.top-k` | Default chunk count on page load |
 | `app.vectorstores.default-vector-store` | Default vector store (`pgvector` or `qdrant`) |
 | `app.vectorstores.qdrant.url` | Qdrant REST base URL |
@@ -156,7 +154,7 @@ sequenceDiagram
     participant Browser
     participant Controller as SearchController
     participant RAG as RagSearchService
-    participant Embed as bge-small ONNX
+    participant Embed as Ollama bge-m3
     participant Store as pgvector or Qdrant
     participant LLM as Ollama
     participant View as Thymeleaf
@@ -164,7 +162,7 @@ sequenceDiagram
     Browser->>Controller: POST /search (question, model, store, chunkCount)
     Controller->>RAG: answer(searchForm)
     RAG->>Embed: embed question
-    Embed-->>RAG: 384-dim query vector
+    Embed-->>RAG: 1024-dim query vector
     RAG->>Store: top-K similarity search (+ optional filters)
     Store-->>RAG: filing chunks + metadata
     RAG->>LLM: question + source excerpts
@@ -176,7 +174,7 @@ sequenceDiagram
 
 1. Browser submits a question via POST to `SearchController` with model, vector store, chunk count, and optional filters.
 2. `RagSearchService` orchestrates the full RAG pipeline on the server — chunks are **not** sent to the browser until the LLM finishes.
-3. Spring AI embeds the question with `bge-small-en-v1.5` (ONNX).
+3. Spring AI embeds the question with Ollama `bge-m3`.
 4. `ChunkSearchRouter` queries **pgvector** (JDBC) or **Qdrant** (REST) for the top-K chunks.
 5. Top-K chunks are passed to Ollama with a system prompt requiring inline citations.
 6. Thymeleaf renders a single HTML response with the answer, source cards, and SEC EDGAR links.
@@ -196,8 +194,8 @@ mvn verify    # same as CI
 | Qdrant connection errors | Start Qdrant; check `app.vectorstores.qdrant.url` (host `16333`, Compose internal `6333`) |
 | Port `8095` already in use | Stop the other process or change `server.port` |
 | Ollama timeout / slow answers | Large models (e.g. `qwen3:30b`) can take minutes; try `qwen3:14b` |
-| Poor search quality | Ensure `bge-small-en-v1.5` embeddings; try ticker/form filters |
-| ONNX download fails | Ensure network access to huggingface.co on first startup |
+| Poor search quality | Ensure `bge-m3` is pulled in Ollama; try ticker/form filters |
+| Embedding errors / wrong dimensions | Run `ollama pull bge-m3`; indexes must be 1024-dim BGE-M3 |
 | Java 25 + Mockito test errors | Use Java 21 for tests |
 
 ## Database requirements
@@ -205,7 +203,7 @@ mvn verify    # same as CI
 When using **pgvector**, the app expects the schema from sec-edgar-filings-to-pgvector:
 
 - **`filings`** — one row per accession
-- **`filing_chunks`** — embedded text chunks with `vector(384)` and HNSW index
+- **`filing_chunks`** — embedded text chunks with `vector(1024)` and HNSW index
 
 When using **Qdrant**, the `filing_chunks` collection must exist (created by sec-edgar-filings-to-qdrant).
 

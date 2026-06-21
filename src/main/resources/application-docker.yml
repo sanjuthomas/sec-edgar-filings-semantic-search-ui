@@ -1,0 +1,25 @@
+# Local app + vector stores in Docker (sec-edgar-filings-to-pgvector compose).
+# Run: mvn spring-boot:run -Dspring-boot.run.profiles=docker
+#
+# Expects edgar-pgvector (ParadeDB + pgvector + pg_search BM25) on localhost:5433.
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/edgar
+    username: postgres
+    password: postgres
+
+app:
+  pgsearch:
+    enabled: true
+    url: jdbc:postgresql://localhost:5433/edgar
+    username: postgres
+    password: postgres
+
+  search:
+    top-k: 25
+    hybrid-retrieval-top-k: 50
+    rerank-top-n: 25
+
+  vectorstores:
+    default-vector-store: pgvector

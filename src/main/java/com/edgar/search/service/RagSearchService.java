@@ -30,17 +30,20 @@ public class RagSearchService {
     private final EmbeddingModel embeddingModel;
     private final ChatClient chatClient;
     private final ChunkSearchRouter chunkSearchRouter;
+    private final PgHybridSearchService pgHybridSearchService;
     private final TickerResolver tickerResolver;
 
     public RagSearchService(
             EmbeddingModel embeddingModel,
             ChatClient chatClient,
             ChunkSearchRouter chunkSearchRouter,
+            PgHybridSearchService pgHybridSearchService,
             TickerResolver tickerResolver
     ) {
         this.embeddingModel = embeddingModel;
         this.chatClient = chatClient;
         this.chunkSearchRouter = chunkSearchRouter;
+        this.pgHybridSearchService = pgHybridSearchService;
         this.tickerResolver = tickerResolver;
     }
 
@@ -54,13 +57,24 @@ public class RagSearchService {
         );
 
         float[] queryVector = embeddingModel.embed(form.question());
-        List<ChunkMatch> sources = chunkSearchRouter.findSimilarChunks(
-                vectorStore,
-                queryVector,
-                form.chunkCount(),
-                resolvedTicker.ticker(),
-                form.normalizedForm()
-        );
+        List<ChunkMatch> sources;
+        if (vectorStore == VectorStoreType.PGVECTOR && pgHybridSearchService.isEnabled()) {
+            sources = pgHybridSearchService.search(
+                    form.question(),
+                    queryVector,
+                    form.chunkCount(),
+                    resolvedTicker.ticker(),
+                    form.normalizedForm()
+            );
+        } else {
+            sources = chunkSearchRouter.findSimilarChunks(
+                    vectorStore,
+                    queryVector,
+                    form.chunkCount(),
+                    resolvedTicker.ticker(),
+                    form.normalizedForm()
+            );
+        }
 
         long retrievalMs = System.currentTimeMillis() - retrievalStart;
 

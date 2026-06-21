@@ -12,7 +12,7 @@ This repo is the **search + answer UI only**. Filing download and vector indexin
 - [sec-edgar-filings-to-qdrant](https://github.com/sanjuthomas/sec-edgar-filings-to-qdrant)
 - [sec-edgar-filings-rag-demo](https://github.com/sanjuthomas/sec-edgar-filings-rag-demo) — full Docker Compose stack
 
-Stack: Java **21**, Maven, Spring Boot **3.4**, Spring AI **1.0**, Thymeleaf, JDBC (pgvector), Qdrant REST, Ollama (chat), Transformers ONNX (query embeddings).
+Stack: Java **21**, Maven, Spring Boot **3.4**, Spring AI **1.0**, Thymeleaf, JDBC (pgvector), Qdrant REST, Ollama (chat + query embeddings).
 
 ---
 
@@ -24,7 +24,7 @@ Agents **must**:
 
 1. Keep the project on **Spring Boot 3.4.x** with **Spring AI 1.0.x**. Do not upgrade to Boot 4 or mix incompatible Spring AI versions without explicit maintainer approval.
 2. Change Boot / Spring AI versions **only** via `pom.xml` parent and BOM — do not pin unrelated Spring artifacts separately unless docs require it.
-3. Use existing starters: `spring-boot-starter-web`, `spring-ai-starter-model-ollama`, `spring-ai-starter-model-transformers`.
+3. Use existing starters: `spring-boot-starter-web`, `spring-ai-starter-model-ollama`.
 4. After dependency bumps, run `mvn verify` and fix breakage before finishing.
 
 **Compatible versions** (defined in `pom.xml` — keep in sync when upgrading):
@@ -43,12 +43,14 @@ Query embeddings **must** match the ingest pipeline.
 
 | Setting | Value |
 |---------|--------|
-| Model | `BAAI/bge-small-en-v1.5` |
-| Dimensions | **384** |
-| Runtime | Spring AI Transformers ONNX (Hugging Face URLs in `application.yml`) |
-| Chat | Ollama only — **not** used for embeddings |
+| Model | `bge-m3` (Ollama) |
+| Dimensions | **1024** |
+| Runtime | Spring AI `OllamaEmbeddingModel` via `spring.ai.ollama.embedding.model` |
+| Chat | Separate Ollama model (`spring.ai.ollama.chat.options.model`) |
 
-Agents **must not** switch to `mxbai-embed-large` or other 1024-dim models without re-indexing both pgvector and Qdrant collections.
+Requires `ollama pull bge-m3` (or equivalent) before search. Query embeddings **must** match the ingest pipeline (`BAAI/bge-m3`, 1024-dim).
+
+Agents **must not** switch to `bge-small-en-v1.5` (384-dim) or other models without re-indexing both pgvector and Qdrant collections.
 
 ---
 
@@ -74,7 +76,7 @@ All orchestration happens in `RagSearchService` — chunks are **not** sent to t
 
 1. `SearchController` validates `SearchForm` and calls `RagSearchService.answer`.
 2. Optional `TickerResolver` infers ticker from the question when no ticker filter is set.
-3. `EmbeddingModel` embeds the question (384-dim ONNX).
+3. `EmbeddingModel` embeds the question via Ollama `bge-m3` (1024-dim).
 4. `ChunkSearchRouter` retrieves top-K chunks from the selected vector store.
 5. `ChatClient` + Ollama synthesize an answer with inline `[1]`, `[2]` citations.
 6. Thymeleaf renders `index.html` with answer, sources, and metadata.
@@ -118,7 +120,7 @@ Agents **should** add tests when changing validation, routing, or ticker-resolut
 ## Commands
 
 ```bash
-mvn spring-boot:run              # run on :8095 (downloads ONNX model on first start)
+mvn spring-boot:run              # run on :8095 (requires Ollama with bge-m3)
 mvn verify                       # build + tests (CI)
 mvn test                         # unit tests only
 docker compose up --build        # local image; needs pgvector + Ollama on host
