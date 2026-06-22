@@ -16,6 +16,14 @@ app:
     username: postgres
     password: postgres
 
+  qdrantsearch:
+    enabled: true
+    url: http://localhost:6333
+    collection: filing_chunks
+    dense-vector: dense
+    bm25-vector: content-bm25
+    bm25-model: Qdrant/bm25
+
   search:
     top-k: 25
     hybrid-retrieval-top-k: 50
@@ -23,3 +31,6 @@ app:
 
   vectorstores:
     default-vector-store: pgvector
+    qdrant:
+      url: http://localhost:6333
+      collection: filing_chunks

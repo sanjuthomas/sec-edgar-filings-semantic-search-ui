@@ -107,7 +107,7 @@ Agents **should** add tests when changing validation, routing, or ticker-resolut
 
 ## Code conventions
 
-- Package root: `com.edgar.search`
+- Package root: `com.sanjuthomas.search`
 - DTOs: Java `record`s with Jakarta validation on `SearchForm`.
 - Config: `@ConfigurationProperties` records (`SearchProperties`, `VectorStoresProperties`) enabled in `AppConfig`.
 - Repositories: `ChunkSearchRepository` interface; one implementation per `VectorStoreType`.

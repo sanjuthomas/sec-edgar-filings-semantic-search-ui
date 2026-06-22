@@ -38,6 +38,14 @@ app:
   pgsearch:
     enabled: false
 
+  qdrantsearch:
+    enabled: false
+    url: http://localhost:16333
+    collection: filing_chunks
+    dense-vector: dense
+    bm25-vector: content-bm25
+    bm25-model: Qdrant/bm25
+
   search:
     top-k: 10
     embedding-dimensions: 1024
@@ -52,4 +60,4 @@ app:
 
 logging:
   level:
-    com.edgar.search: INFO
+    com.sanjuthomas.search: INFO
